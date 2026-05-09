@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  iss-tracker:
+    build: .
+    container_name: iss-tracker
+    ports:
+      - "8080:8080"
+    environment:
+      # This environment variable maps to the 'n2yo.api.key' property in application.properties
+      - N2YO_API_KEY=${N2YO_API_KEY:-843BMW-D5DKDM-9DXK98-5QLX}
+    restart: unless-stopped
