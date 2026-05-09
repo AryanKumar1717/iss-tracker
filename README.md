@@ -133,4 +133,4 @@ Connect to the WebSocket endpoint to receive live ISS location updates streamed 
 ## 👨‍💻 Author
 
 **Aryan**
-*   GitHub: [@AryanDevlearner](https://github.com/AryanDevlearner)
+*   GitHub: [@AryanKumar1717](https://github.com/AryanKumar1717)
