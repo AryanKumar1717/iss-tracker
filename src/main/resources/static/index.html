@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orbital Sentinel - Live ISS & Satellite Tracker</title>
+    <meta name="description" content="A futuristic, high-performance real-time telemetry console for tracking the International Space Station (ISS) and global satellite constellations.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for futuristic icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Leaflet JS Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <style>
+        :root {
+            --bg-deep: #030308;
+            --bg-panel: rgba(10, 11, 23, 0.75);
+            --bg-card: rgba(18, 20, 38, 0.5);
+            --accent-cyan: #00f2fe;
+            --accent-purple: #9d4edd;
+            --accent-pink: #ff007f;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --text-dark: #64748b;
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --border-neon: rgba(0, 242, 254, 0.3);
+            --shadow-cyan: 0 0 15px rgba(0, 242, 254, 0.2);
+            --shadow-purple: 0 0 15px rgba(157, 78, 221, 0.2);
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(157, 78, 221, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(0, 242, 254, 0.1) 0%, transparent 40%),
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%);
+            background-size: 100% 100%, 100% 100%, 100% 4px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(3, 3, 8, 0.8);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(157, 78, 221, 0.4);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-cyan);
+            box-shadow: var(--shadow-cyan);
+        }
+
+        /* Core Layout */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: rgba(3, 3, 8, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-glass);
+            z-index: 100;
+            position: sticky;
+            top: 0;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            font-size: 1.75rem;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: spin-slow 15s linear infinite;
+        }
+
+        @keyframes spin-slow {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+
+        .logo-text h1 {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #fff, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-text span {
+            font-size: 0.7rem;
+            color: var(--accent-cyan);
+            font-family: var(--font-mono);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            display: block;
+            margin-top: -2px;
+        }
+
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .status-pill {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-glass);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+        }
+
+        .pulse-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent-cyan);
+            box-shadow: 0 0 10px var(--accent-cyan);
+            position: relative;
+        }
+
+        .pulse-indicator::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+            border: 2px solid var(--accent-cyan);
+            border-radius: 50%;
+            animation: pulse-ring 1.5s cubic-bezier(0.215, 0.610, 0.355, 1) infinite;
+            opacity: 0;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { opacity: 0.6; }
+            100% { transform: scale(1.8); opacity: 0; }
+        }
+
+        .pulse-indicator.disconnected {
+            background-color: var(--accent-pink);
+            box-shadow: 0 0 10px var(--accent-pink);
+        }
+
+        .pulse-indicator.disconnected::after {
+            border-color: var(--accent-pink);
+        }
+
+        .pulse-indicator.searching {
+            background-color: #ffd166;
+            box-shadow: 0 0 10px #ffd166;
+        }
+
+        .pulse-indicator.searching::after {
+            border-color: #ffd166;
+        }
+
+        /* Main Workspace */
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            height: calc(100vh - 70px);
+            position: relative;
+        }
+
+        /* Sidebar Control Center */
+        .sidebar {
+            background: var(--bg-panel);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border-glass);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 1.5rem;
+            gap: 1.5rem;
+            z-index: 10;
+        }
+
+        .panel-title {
+            font-family: var(--font-display);
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent-purple);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+        }
+
+        .panel-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 1.25rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .panel-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--accent-cyan), var(--accent-purple));
+            opacity: 0.8;
+        }
+
+        .panel-card:hover {
+            border-color: var(--border-neon);
+            box-shadow: var(--shadow-cyan);
+            transform: translateY(-2px);
+        }
+
+        /* Telemetry Fields */
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .telemetry-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        .telemetry-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.25rem;
+        }
+
+        .telemetry-value {
+            font-family: var(--font-mono);
+            font-size: 1.05rem;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .telemetry-value.accent {
+            color: var(--accent-cyan);
+        }
+
+        /* Satellite Selector */
+        .satellite-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .sat-btn {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-glass);
+            color: var(--text-main);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            text-align: left;
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .sat-btn:hover, .sat-btn.active {
+            background: rgba(0, 242, 254, 0.08);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.1);
+        }
+
+        .sat-btn .sat-id {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+        }
+
+        .sat-btn.active .sat-id {
+            color: var(--accent-cyan);
+            background: rgba(0, 242, 254, 0.15);
+        }
+
+        /* Custom Norad Selector */
+        .norad-input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .norad-input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            padding: 0.6rem 0.8rem;
+            color: #fff;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .norad-input:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 5px rgba(0, 242, 254, 0.3);
+        }
+
+        .norad-submit-btn {
+            background: linear-gradient(135deg, var(--accent-purple), #6320ee);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            width: 40px;
+            height: 38px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .norad-submit-btn:hover {
+            box-shadow: var(--shadow-purple);
+            transform: scale(1.05);
+        }
+
+        /* Live Terminal Box */
+        .live-terminal {
+            background: #020205;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            height: 140px;
+            padding: 0.75rem;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: #4dfa8c;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            position: relative;
+        }
+
+        .live-terminal::after {
+            content: 'LIVE TELEMETRY STREAM';
+            position: absolute;
+            top: 4px;
+            right: 8px;
+            color: rgba(77, 250, 140, 0.2);
+            font-size: 0.6rem;
+            letter-spacing: 1px;
+        }
+
+        .terminal-line {
+            line-height: 1.2;
+            word-break: break-all;
+        }
+
+        .terminal-line span.timestamp {
+            color: #a485ff;
+        }
+
+        /* Map Container */
+        .map-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            background: #090b10;
+        }
+
+        /* Custom Leaflet Darkening */
+        .leaflet-container {
+            background-color: #05050a !important;
+        }
+
+        /* Glowing overlay */
+        .map-overlay-vignette {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+        }
+
+        /* Dynamic Map Controls Panel */
+        .map-info-overlay {
+            position: absolute;
+            bottom: 1.5rem;
+            left: 1.5rem;
+            z-index: 1001;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            pointer-events: auto;
+        }
+
+        .overlay-card {
+            background: rgba(5, 5, 12, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .overlay-card:hover {
+            border-color: rgba(157, 78, 221, 0.5);
+            box-shadow: 0 10px 30px rgba(157, 78, 221, 0.15);
+        }
+
+        .overlay-icon {
+            font-size: 1.5rem;
+            color: var(--accent-cyan);
+        }
+
+        .overlay-data h4 {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .overlay-data p {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        /* Marker Styles */
+        .custom-sat-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+        }
+
+        .radar-glow {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(0, 242, 254, 0.1);
+            border: 1px solid var(--accent-cyan);
+            animation: radar-expand 1.5s ease-out infinite;
+        }
+
+        @keyframes radar-expand {
+            0% { transform: scale(0.2); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        .sat-marker-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fff, var(--accent-cyan));
+            border: 2px solid var(--bg-deep);
+            box-shadow: var(--shadow-cyan);
+            position: relative;
+            z-index: 2;
+        }
+
+        .sat-marker-label {
+            position: absolute;
+            bottom: 20px;
+            background: rgba(5, 5, 12, 0.9);
+            border: 1px solid var(--accent-cyan);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            color: #fff;
+            white-space: nowrap;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            letter-spacing: 0.5px;
+            transform: translateX(-40%);
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 1024px) {
+            main {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            
+            .sidebar {
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid var(--border-glass);
+            }
+
+            .map-wrapper {
+                height: 500px;
+            }
+
+            .interactive-drawer {
+                position: static;
+                width: 100%;
+                max-height: none;
+                border-radius: 0;
+                border: none;
+                border-bottom: 1px solid var(--border-glass);
+                box-shadow: none;
+            }
+
+            .map-info-overlay {
+                bottom: 1rem;
+                left: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-section">
+            <i class="fa-solid fa-satellite logo-icon"></i>
+            <div class="logo-text">
+                <h1>Orbital Sentinel</h1>
+                <span>Mission Control Telemetry</span>
+            </div>
+        </div>
+        
+        <div class="system-status">
+            <div class="status-pill">
+                <div class="pulse-indicator" id="streamStatus"></div>
+                <span id="streamStatusText">WS CONNECTING</span>
+            </div>
+            <div class="status-pill">
+                <i class="fa-regular fa-clock" style="color: var(--accent-purple);"></i>
+                <span id="systemTime">00:00:00 UTC</span>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Sidebar Control Panel -->
+        <section class="sidebar">
+            <!-- Satellite Telemetry -->
+            <div>
+                <h3 class="panel-title"><i class="fa-solid fa-gauge-high"></i> Telemetry Matrix</h3>
+                <div class="panel-card">
+                    <div class="telemetry-grid">
+                        <div class="telemetry-item" style="grid-column: span 2;">
+                            <div class="telemetry-label">Active Satellite</div>
+                            <div class="telemetry-value accent" id="telName">ISS (ZARYA)</div>
+                        </div>
+                        <div class="telemetry-item">
+                            <div class="telemetry-label">Latitude</div>
+                            <div class="telemetry-value" id="telLat">0.0000°</div>
+                        </div>
+                        <div class="telemetry-item">
+                            <div class="telemetry-label">Longitude</div>
+                            <div class="telemetry-value" id="telLon">0.0000°</div>
+                        </div>
+                        <div class="telemetry-item">
+                            <div class="telemetry-label">Timestamp</div>
+                            <div class="telemetry-value" id="telTime" style="font-size: 0.8rem; line-height: 1.5;">--:--:--</div>
+                        </div>
+                        <div class="telemetry-item">
+                            <div class="telemetry-label">Norad ID</div>
+                            <div class="telemetry-value" id="telId">25544</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Satellite Switcher -->
+            <div>
+                <h3 class="panel-title"><i class="fa-solid fa-list"></i> Select Tracker</h3>
+                <div class="satellite-selector">
+                    <button class="sat-btn active" onclick="switchSatellite(25544, 'ISS (ZARYA)')">
+                        <span>🛰️ International Space Station</span>
+                        <span class="sat-id">25544</span>
+                    </button>
+                    <button class="sat-btn" onclick="switchSatellite(20580, 'Hubble Telescope')">
+                        <span>🔭 Hubble Space Telescope</span>
+                        <span class="sat-id">20580</span>
+                    </button>
+                    <button class="sat-btn" onclick="switchSatellite(27424, 'Aqua Observation')">
+                        <span>💧 Aqua Observation Sat</span>
+                        <span class="sat-id">27424</span>
+                    </button>
+                    <button class="sat-btn" onclick="switchSatellite(33591, 'NOAA 19')">
+                        <span>☁️ NOAA 19 Weather Sat</span>
+                        <span class="sat-id">33591</span>
+                    </button>
+                </div>
+                
+                <div class="norad-input-group">
+                    <input type="number" class="norad-input" id="noradIdInput" placeholder="Enter custom NORAD ID..." min="1">
+                    <button class="norad-submit-btn" onclick="trackCustomNorad()" title="Track Custom ID">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Live Terminal -->
+            <div style="flex: 1; display: flex; flex-direction: column; min-height: 200px;">
+                <h3 class="panel-title"><i class="fa-solid fa-terminal"></i> Telemetry Packets</h3>
+                <div class="live-terminal" id="terminal">
+                    <div class="terminal-line"><span class="timestamp">[SYSTEM]</span> Console initialized.</div>
+                    <div class="terminal-line"><span class="timestamp">[SYSTEM]</span> Awaiting orbital data...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Map & Visualization Panel -->
+        <section class="map-wrapper">
+            <div class="map-overlay-vignette"></div>
+            <div id="map"></div>
+            
+            <!-- Map Overlay Info -->
+            <div class="map-info-overlay">
+                <div class="overlay-card">
+                    <div class="overlay-icon"><i class="fa-solid fa-arrows-spin fa-spin" style="color: var(--accent-cyan);"></i></div>
+                    <div class="overlay-data">
+                        <h4>Footprint Orbit</h4>
+                        <p id="overlayHeading">Tracking Active</p>
+                    </div>
+                </div>
+                <div class="overlay-card">
+                    <div class="overlay-icon"><i class="fa-solid fa-earth-americas" style="color: var(--accent-purple);"></i></div>
+                    <div class="overlay-data">
+                        <h4>Earth Coverage</h4>
+                        <p>Global 3D Trace</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let currentNoradId = 25544; // Default ISS
+        let currentSatelliteName = "ISS (ZARYA)";
+        let map;
+        let satMarker;
+        let orbitPath;
+        let pathCoordinates = [];
+        let wsClient;
+        let getTelemetryInterval;
+        let isWSActive = false;
+
+        // Initialize Application
+        window.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            updateSystemTime();
+            setInterval(updateSystemTime, 1000);
+            
+            // Initial telemetry stream & crew download
+            startTracking();
+        });
+
+        // Initialize Leaflet Map
+        function initMap() {
+            // Dark elegant CartoDB Map style
+            map = L.map('map', {
+                center: [20, 0],
+                zoom: 2.5,
+                zoomControl: false,
+                attributionControl: false
+            });
+            
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19
+            }).addTo(map);
+            
+            // Adjust zoom controls to bottom-right
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            // Orbit path initialization
+            orbitPath = L.polyline([], {
+                color: 'rgba(0, 242, 254, 0.45)',
+                weight: 2,
+                dashArray: '5, 10'
+            }).addTo(map);
+        }
+
+        // Real-time System Clock
+        function updateSystemTime() {
+            const timeSpan = document.getElementById('systemTime');
+            const now = new Date();
+            timeSpan.textContent = now.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+        }
+
+        // Console logger
+        function logToTerminal(message, type = 'telemetry') {
+            const terminal = document.getElementById('terminal');
+            const line = document.createElement('div');
+            line.className = 'terminal-line';
+            
+            const now = new Date();
+            const timeStr = now.toISOString().substring(11, 19);
+            
+            let typeColor = '';
+            if (type === 'system') {
+                typeColor = 'color: #ffd166;';
+            } else if (type === 'error') {
+                typeColor = 'color: var(--accent-pink);';
+            } else if (type === 'success') {
+                typeColor = 'color: #4dfa8c;';
+            }
+            
+            line.innerHTML = `<span class="timestamp">[${timeStr}]</span> <span style="${typeColor}">${message}</span>`;
+            terminal.appendChild(line);
+            
+            // Auto scroll terminal
+            terminal.scrollTop = terminal.scrollHeight;
+            
+            // Limit lines to 100
+            while (terminal.childElementCount > 100) {
+                terminal.removeChild(terminal.firstChild);
+            }
+        }
+
+        // Start tracking active satellite
+        function startTracking() {
+            // Reset existing state
+            if (wsClient) {
+                wsClient.close();
+            }
+            if (getTelemetryInterval) {
+                clearInterval(getTelemetryInterval);
+            }
+            
+            pathCoordinates = [];
+            if (orbitPath) {
+                orbitPath.setLatLngs([]);
+            }
+            
+            logToTerminal(`System starting tracker for NORAD ID: ${currentNoradId}`, 'system');
+            
+            if (currentNoradId === 25544) {
+                // ISS supports high-performance WebSocket streams!
+                connectWebSocket();
+            } else {
+                // Generic satellites query the N2YO REST API recursively
+                updateStatus('searching', 'REST SEARCHING');
+                pollRESTTelemetry();
+                getTelemetryInterval = setInterval(pollRESTTelemetry, 5000);
+            }
+        }
+
+        // WebSocket Connection for ISS Live updates
+        function connectWebSocket() {
+            const loc = window.location;
+            let wsUri = "";
+            if (loc.protocol === "https:") {
+                wsUri = "wss:";
+            } else {
+                wsUri = "ws:";
+            }
+            wsUri += "//" + loc.host + "/ws/iss";
+            
+            updateStatus('searching', 'WS CONNECTING');
+            logToTerminal(`Establishing high-speed uplink to ${wsUri}`, 'system');
+            
+            wsClient = new WebSocket(wsUri);
+            
+            wsClient.onopen = () => {
+                isWSActive = true;
+                updateStatus('connected', 'WS CONNECTED');
+                logToTerminal("Uplink handshake successful. Streaming real-time telemetry.", "success");
+            };
+            
+            wsClient.onmessage = (event) => {
+                try {
+                    const position = JSON.parse(event.data);
+                    processTelemetry(position);
+                } catch (e) {
+                    logToTerminal(`Error parsing telemetry frame: ${e.message}`, 'error');
+                }
+            };
+            
+            wsClient.onerror = (err) => {
+                logToTerminal(`WebSocket connection failed. Falling back to HTTP polling.`, 'error');
+            };
+            
+            wsClient.onclose = () => {
+                isWSActive = false;
+                if (currentNoradId === 25544) {
+                    updateStatus('searching', 'HTTP POLLING');
+                    logToTerminal("WebSocket disconnected. Initiating regular HTTP pooling backup.", "system");
+                    pollHTTPTelemetry();
+                    getTelemetryInterval = setInterval(pollHTTPTelemetry, 2500);
+                }
+            };
+        }
+
+        // HTTP GET fallback for ISS
+        function pollHTTPTelemetry() {
+            fetch('/api/iss/location')
+                .then(res => {
+                    if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+                    return res.json();
+                })
+                .then(data => {
+                    processTelemetry(data);
+                })
+                .catch(err => {
+                    logToTerminal(`Telemetry download failed: ${err.message}`, 'error');
+                    updateStatus('disconnected', 'UPLINK OFFLINE');
+                });
+        }
+
+        // REST GET for Generic Satellites
+        function pollRESTTelemetry() {
+            fetch(`/api/satellites/${currentNoradId}`)
+                .then(res => {
+                    if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+                    return res.json();
+                })
+                .then(data => {
+                    if (data && data.error) {
+                        throw new Error(data.error);
+                    }
+                    if (data && data.positions && data.positions.length > 0) {
+                        updateStatus('connected', 'API CONNECTED');
+                        const pos = data.positions[0];
+                        
+                        const telemetry = {
+                            latitude: pos.satlatitude,
+                            longitude: pos.satlongitude,
+                            timestamp: pos.timestamp,
+                            message: "success"
+                        };
+                        
+                        processTelemetry(telemetry);
+                    } else {
+                        throw new Error("Empty position array received from API");
+                    }
+                })
+                .catch(err => {
+                    logToTerminal(`N2YO Query failed: ${err.message}`, 'error');
+                    updateStatus('disconnected', 'UPLINK OFFLINE');
+                });
+        }
+
+        // Common Telemetry Frame processing
+        function processTelemetry(data) {
+            const lat = parseFloat(data.latitude || data.iss_position?.latitude);
+            const lon = parseFloat(data.longitude || data.iss_position?.longitude);
+            const timestamp = parseInt(data.timestamp);
+            
+            if (isNaN(lat) || isNaN(lon)) {
+                logToTerminal("CORRUPTED PACKET DETECTED: Invalid lat/lon coordinates.", "error");
+                return;
+            }
+            
+            // Renders to telemetry card
+            document.getElementById('telLat').textContent = lat.toFixed(4) + '°';
+            document.getElementById('telLon').textContent = lon.toFixed(4) + '°';
+            
+            const date = timestamp ? new Date(timestamp * 1000) : new Date();
+            document.getElementById('telTime').textContent = date.toISOString().replace('T', ' ').substring(0, 19);
+            
+            // Console stream logging
+            logToTerminal(`Rx telemetry frame: L:${lat.toFixed(3)}, R:${lon.toFixed(3)} [OK]`);
+            
+            // Map operations
+            const latLng = [lat, lon];
+            
+            // Accumulate coordinates for trail path
+            pathCoordinates.push(latLng);
+            if (pathCoordinates.length > 500) {
+                pathCoordinates.shift();
+            }
+            
+            orbitPath.setLatLngs(pathCoordinates);
+            
+            // Update Marker
+            if (!satMarker) {
+                // Create custom neon-glow divicon
+                const customIcon = L.divIcon({
+                    className: 'custom-sat-icon',
+                    html: `
+                        <div class="radar-glow"></div>
+                        <div class="sat-marker-dot"></div>
+                        <div class="sat-marker-label" id="markerLabel">${currentSatelliteName}</div>
+                    `,
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20]
+                });
+                
+                satMarker = L.marker(latLng, { icon: customIcon }).addTo(map);
+            } else {
+                satMarker.setLatLng(latLng);
+                const markerLabel = document.getElementById('markerLabel');
+                if (markerLabel) {
+                    markerLabel.textContent = currentSatelliteName;
+                }
+            }
+            
+            // Center map smoothly on satellite marker
+            map.panTo(latLng);
+        }
+
+        // Switch Satellite Target
+        function switchSatellite(noradId, name) {
+            currentNoradId = noradId;
+            currentSatelliteName = name;
+            
+            document.getElementById('telName').textContent = name;
+            document.getElementById('telId').textContent = noradId;
+            
+            // Toggle active status in button list
+            const buttons = document.querySelectorAll('.sat-btn');
+            buttons.forEach(btn => {
+                const idSpan = btn.querySelector('.sat-id');
+                if (idSpan && parseInt(idSpan.textContent) === noradId) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // Reset existing marker
+            if (satMarker) {
+                map.removeLayer(satMarker);
+                satMarker = null;
+            }
+            
+            startTracking();
+        }
+
+        // Custom NORAD lookup
+        function trackCustomNorad() {
+            const input = document.getElementById('noradIdInput');
+            const noradId = parseInt(input.value);
+            
+            if (isNaN(noradId) || noradId <= 0) {
+                logToTerminal("Error: Custom NORAD ID must be a positive integer.", "error");
+                return;
+            }
+            
+            switchSatellite(noradId, `SAT-NORAD: ${noradId}`);
+            input.value = "";
+        }
+
+        // System status UI updates
+        function updateStatus(status, text) {
+            const pill = document.getElementById('streamStatus');
+            const pillText = document.getElementById('streamStatusText');
+            
+            pill.className = 'pulse-indicator ' + status;
+            pillText.textContent = text;
+        }
+
+        
+
+        // GPS Geolocation trigger
+        function useMyLocation() {
+        if (navigator.geolocation) {
+            logToTerminal("Requesting device coordinate clearance...", 'system');
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+
+                    // Pan map to user's location instead of writing to inputs
+                    map.setView([lat, lon], 5);
+
+                    logToTerminal(`GPS Lock established: L:${lat.toFixed(3)}, R:${lon.toFixed(3)}`, 'success');
+                },
+                (error) => {
+                    logToTerminal(`GPS request rejected: ${error.message}`, 'error');
+                }
+            );
+        } else {
+            logToTerminal("HTML5 Geolocation is not supported by this sensor suite.", 'error');
+        }
+    }
+    </script>
+</body>
+</html>

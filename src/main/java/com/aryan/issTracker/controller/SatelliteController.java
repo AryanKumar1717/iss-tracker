@@ -21,8 +21,8 @@ public class SatelliteController {
         this.satelliteService = satelliteService;
     }
 
-    @GetMapping("/{noradId}")
-    public Mono<JsonNode> getSatellitePosition(@PathVariable @Positive int noradId) {
+    @GetMapping(value = "/{noradId}", produces = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
+    public Mono<String> getSatellitePosition(@PathVariable @Positive int noradId) {
         return satelliteService.getSatellitePosition(noradId);
     }
 }
